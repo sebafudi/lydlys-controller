@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"net"
 	"time"
@@ -46,7 +47,10 @@ func send_udp_packet(conn net.Conn, led_array [97][3]byte) {
 }
 
 func main() {
-	connection := start_connection("10.45.5.32", "4210")
+	ip := *flag.String("ip", "10.45.5.32", "IP address to send UDP packets to")
+	port := *flag.String("port", "4210", "Port to send UDP packets to")
+	flag.Parse()
+	connection := start_connection(ip, port)
 	// var led_array = make([97][3]byte{})
 	led_array := make(chan [97][3]byte)
 	const fps = 60
