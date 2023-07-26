@@ -1,9 +1,15 @@
 package main
 
 import (
+	"bytes"
+	"crypto/ed25519"
+	"crypto/rand"
+	"encoding/base64"
 	"flag"
 	"fmt"
 	"net"
+	"net/http"
+	"os"
 	"time"
 
 	"github.com/PerformLine/go-stockutil/colorutil"
@@ -46,7 +52,88 @@ func send_udp_packet(conn net.Conn, led_array [97][3]byte) {
 	}
 }
 
+func create_keys() ([]byte, []byte) {
+	// create priv/pub key pair
+	priv, pub, err := ed25519.GenerateKey(rand.Reader)
+	if err != nil {
+		fmt.Println(err)
+		return nil, nil
+	}
+	return priv, pub
+}
+
+func convert_to_base64(priv, pub []byte) (string, string) {
+	priv_base64 := base64.StdEncoding.EncodeToString(priv)
+	pub_base64 := base64.StdEncoding.EncodeToString(pub)
+	return priv_base64, pub_base64
+}
+
+func create_new_keys() ([]byte, []byte) {
+	priv, pub := create_keys()
+	priv_base64, pub_base64 := convert_to_base64(priv, pub)
+	os.WriteFile("pub.key", []byte(pub_base64), 0644)
+	os.WriteFile("priv.key", []byte(priv_base64), 0644)
+	return priv, pub
+}
+
+func read_keys() ([]byte, []byte) {
+	priv_base64, err := os.ReadFile("priv.key")
+	if err != nil {
+		fmt.Println(err)
+		return nil, nil
+	}
+	pub_base64, err := os.ReadFile("pub.key")
+	if err != nil {
+		fmt.Println(err)
+		return nil, nil
+	}
+	priv, err := base64.StdEncoding.DecodeString(string(priv_base64))
+	if err != nil {
+		fmt.Println(err)
+		return nil, nil
+	}
+	pub, err := base64.StdEncoding.DecodeString(string(pub_base64))
+	if err != nil {
+		fmt.Println(err)
+		return nil, nil
+	}
+	return priv, pub
+}
+
+func prepare_keys() ([]byte, []byte) {
+	var priv, pub []byte = make([]byte, 64), make([]byte, 32)
+
+	if _, err := os.Stat("priv.key"); os.IsNotExist(err) {
+		priv, pub = create_new_keys()
+	} else {
+		priv, pub = read_keys()
+	}
+	return priv, pub
+}
+
+const SERIAL = "ABC123"
+
 func main() {
+	priv, pub := prepare_keys()
+	if priv == nil || pub == nil {
+		fmt.Println("Error preparing keys")
+		return
+	}
+	_, pub_base64 := convert_to_base64(priv, pub)
+
+	// send http request to server with pub key and serial number
+	
+	address := "http://localhost:3000/registerDevice"
+
+	// send http request to server with pub key and serial number as json
+	data := fmt.Sprintf(`{"pub_key": "%s", "serial": "%s"}`, string(pub_base64), SERIAL)
+	_, err := http.Post(address, "application/json", bytes.NewBuffer([]byte(data)))
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+
 	ip := *flag.String("ip", "10.45.5.32", "IP address to send UDP packets to")
 	port := *flag.String("port", "4210", "Port to send UDP packets to")
 	flag.Parse()
