@@ -2,17 +2,20 @@ package main
 
 import (
 	"bytes"
-	"crypto/ed25519"
 	"crypto/rand"
+	"crypto/rsa"
+	"crypto/x509"
 	"encoding/base64"
 	"flag"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"os"
 	"time"
 
 	"github.com/PerformLine/go-stockutil/colorutil"
+	"github.com/joho/godotenv"
 )
 
 func generate_rainbow(led_array_chan chan [97][3]byte, offset float64) {
@@ -53,13 +56,23 @@ func send_udp_packet(conn net.Conn, led_array [97][3]byte) {
 }
 
 func create_keys() ([]byte, []byte) {
-	// create priv/pub key pair
-	priv, pub, err := ed25519.GenerateKey(rand.Reader)
+	priv, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
 		fmt.Println(err)
 		return nil, nil
 	}
-	return priv, pub
+	pub := priv.Public()
+	priv_bytes := x509.MarshalPKCS1PrivateKey(priv)
+	if err != nil {
+		fmt.Println(err)
+		return nil, nil
+	}
+	pub_bytes, err := x509.MarshalPKIXPublicKey(pub)
+	if err != nil {
+		fmt.Println(err)
+		return nil, nil
+	}
+	return priv_bytes, pub_bytes
 }
 
 func convert_to_base64(priv, pub []byte) (string, string) {
@@ -111,9 +124,30 @@ func prepare_keys() ([]byte, []byte) {
 	return priv, pub
 }
 
-const SERIAL = "ABC123"
+func decode_using_private_key(priv []byte, data []byte) []byte {
+	priv_key, err := x509.ParsePKCS1PrivateKey(priv)
+	if err != nil {
+		fmt.Println(err)
+		return nil
+	}
+	decrypted_data, err := rsa.DecryptPKCS1v15(rand.Reader, priv_key, data)
+	if err != nil {
+		fmt.Println(err)
+		return nil
+	}
+	return decrypted_data
+}
 
 func main() {
+	
+	goEnv := os.Getenv("GO_ENV")
+	if goEnv == "" || goEnv == "development" {
+		err := godotenv.Load()
+		if err != nil {
+			fmt.Println("Error loading .env file")
+			return
+		}
+	}
 	priv, pub := prepare_keys()
 	if priv == nil || pub == nil {
 		fmt.Println("Error preparing keys")
@@ -126,13 +160,45 @@ func main() {
 	address := "http://localhost:3000/registerDevice"
 
 	// send http request to server with pub key and serial number as json
-	data := fmt.Sprintf(`{"pub_key": "%s", "serial": "%s"}`, string(pub_base64), SERIAL)
+	data := fmt.Sprintf(`{"pub_key": "%s", "serial": "%s"}`, string(pub_base64), os.Getenv("SERIAL"))
 	_, err := http.Post(address, "application/json", bytes.NewBuffer([]byte(data)))
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
 
+	address = fmt.Sprintf("http://localhost:3000/getUserToken?email=%s&serial=%s", os.Getenv("TEST_EMAIL"), os.Getenv("SERIAL"))
+	resp, err := http.Get(address)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+    
+	defer resp.Body.Close()
+
+	var bodyString string
+
+	if resp.StatusCode == http.StatusOK {
+		bodyBytes, err := io.ReadAll(resp.Body)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		bodyString = string(bodyBytes)
+	}
+
+	bodyBytes, err := base64.StdEncoding.DecodeString(bodyString)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	decrypted_data := decode_using_private_key(priv, bodyBytes)
+	if decrypted_data == nil {
+		fmt.Println("Error decrypting data")
+		return
+	}
+	fmt.Println(string(decrypted_data))
 
 	ip := *flag.String("ip", "10.45.5.32", "IP address to send UDP packets to")
 	port := *flag.String("port", "4210", "Port to send UDP packets to")
