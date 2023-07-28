@@ -1,4 +1,4 @@
-package main
+package app
 
 import (
 	"bytes"
@@ -138,8 +138,8 @@ func decode_using_private_key(priv []byte, data []byte) []byte {
 	return decrypted_data
 }
 
-func main() {
-	
+func RunApp() {
+
 	goEnv := os.Getenv("GO_ENV")
 	if goEnv == "" || goEnv == "development" {
 		err := godotenv.Load()
@@ -156,7 +156,7 @@ func main() {
 	_, pub_base64 := convert_to_base64(priv, pub)
 
 	// send http request to server with pub key and serial number
-	
+
 	address := "http://localhost:3000/registerDevice"
 
 	// send http request to server with pub key and serial number as json
@@ -173,7 +173,7 @@ func main() {
 		fmt.Println(err)
 		return
 	}
-    
+
 	defer resp.Body.Close()
 
 	var bodyString string
