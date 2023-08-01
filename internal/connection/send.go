@@ -5,7 +5,7 @@ import (
 	"net"
 )
 
-func SendUdpPacket(conn net.Conn, ledArray [97][3]byte) {
+func SendUdpPacket(conn net.Conn, ledArray [][3]byte) {
 	var bytesToSend []byte
 	for i := 0; i < 97; i++ {
 		for j := 0; j < 3; j++ {

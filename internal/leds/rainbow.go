@@ -9,8 +9,8 @@ import (
 	"github.com/sebafudi/lydlys-controller/internal/connection"
 )
 
-func GenerateRainbow(ledArrayChan chan [97][3]byte, offset float64) {
-	var ledArray [97][3]byte
+func GenerateRainbow(ledArrayChan chan [][3]byte, offset float64) {
+	ledArray := make([][3]byte, 97)
 	for i := 0; i < 97; i++ {
 		hue := float64(i) / 97 * 360
 		r, g, b := colorutil.HsvToRgb(hue+offset, 1, 1)
@@ -23,8 +23,8 @@ func GenerateRainbow(ledArrayChan chan [97][3]byte, offset float64) {
 	ledArrayChan <- ledArray
 }
 
-func sweep(offset int) [97][3]byte {
-	var ledArray [97][3]byte
+func sweep(offset int) [][3]byte {
+	ledArray := make([][3]byte, 97)
 	for i := 0; i <= 97; i++ {
 		ledArray[offset] = [3]byte{255, 255, 255}
 
@@ -35,7 +35,7 @@ func sweep(offset int) [97][3]byte {
 func BootAnimation(connectionc net.Conn, bootDone chan bool) {
 	const fps = 60
 	var frameDuration time.Duration = time.Second / time.Duration(fps)
-	frames := make(chan [97][3]byte)
+	frames := make(chan [][3]byte, 97)
 	go func() {
 		for i := 0; i < 97; i++ {
 			led := sweep(i)

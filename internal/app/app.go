@@ -40,7 +40,7 @@ func RunApp() {
 	const fps = 60
 	offset := 0.0
 	var frameDuration time.Duration = time.Second / time.Duration(fps)
-	ledArray := make(chan [97][3]byte)
+	ledArray := make(chan [][3]byte, 97)
 	for {
 		start := time.Now()
 		go leds.GenerateRainbow(ledArray, offset)
