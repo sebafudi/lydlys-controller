@@ -1,12 +1,7 @@
 package leds
 
 import (
-	"fmt"
-	"net"
-	"time"
-
 	"github.com/PerformLine/go-stockutil/colorutil"
-	"github.com/sebafudi/lydlys-controller/internal/connection"
 )
 
 func GenerateRainbow(ledArrayChan chan [][3]byte, offset float64) {
@@ -18,47 +13,6 @@ func GenerateRainbow(ledArrayChan chan [][3]byte, offset float64) {
 		for j := 0; j < 3; j++ {
 			ledArray[i][j] = rgb[j]
 		}
-
 	}
 	ledArrayChan <- ledArray
-}
-
-func sweep(offset int) [][3]byte {
-	ledArray := make([][3]byte, 97)
-	for i := 0; i <= 97; i++ {
-		ledArray[offset] = [3]byte{255, 255, 255}
-
-	}
-	return ledArray
-}
-
-func BootAnimation(connectionc net.Conn, bootDone chan bool) {
-	const fps = 60
-	var frameDuration time.Duration = time.Second / time.Duration(fps)
-	frames := make(chan [][3]byte, 97)
-	go func() {
-		for i := 0; i < 97; i++ {
-			led := sweep(i)
-			frames <- led
-		}
-		close(frames)
-	}()
-	go func() {
-		for {
-			start := time.Now()
-			ledArray, more := <-frames
-			select {
-			case <-bootDone:
-				return
-			default:
-			}
-			connection.SendUdpPacket(connectionc, ledArray)
-			if !more {
-				return
-			}
-			for time.Since(start) < frameDuration-time.Duration(time.Since(start).Milliseconds()) {
-			}
-			fmt.Println(time.Since(start))
-		}
-	}()
 }
