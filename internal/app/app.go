@@ -1,9 +1,7 @@
 package app
 
 import (
-	"flag"
 	"fmt"
-	"os"
 	"sync"
 	"time"
 
@@ -13,18 +11,18 @@ import (
 )
 
 func RunApp() {
-	config.LoadEnv()
-	flag.Parse()
-	ip := *flag.String("ip", os.Getenv("DEFAULT_IP"), "IP address to send UDP packets to")
-	port := *flag.String("port", os.Getenv("DEFAULT_PORT"), "Port to send UDP packets to")
-	connectionc := connection.StartConnection(ip, port)
+	err := config.ParseEnvs()
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	flags := config.GetFlags()
+	connectionc := connection.StartConnection(flags.Ip, flags.Port)
 	var wg sync.WaitGroup
 
 	bootDone := make(chan bool)
 	go func() {
-		done := make(chan bool)
-		go leds.BootAnimation(connectionc, done, bootDone)
-		<-done
+		go leds.BootAnimation(connectionc, bootDone)
 	}()
 
 	wg.Add(1)
@@ -38,7 +36,6 @@ func RunApp() {
 
 	wg.Wait()
 	bootDone <- true
-	fmt.Println("Done")
 
 	const fps = 60
 	offset := 0.0
@@ -51,6 +48,5 @@ func RunApp() {
 		offset += 1
 		for time.Since(start) < frame_duration-time.Duration(time.Since(start).Milliseconds()) {
 		}
-		fmt.Println(time.Since(start))
 	}
 }

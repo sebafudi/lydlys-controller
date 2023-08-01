@@ -32,7 +32,7 @@ func sweep(offset int) [97][3]byte {
 	return led_array
 }
 
-func BootAnimation(connectionc net.Conn, done chan bool, bootDone chan bool) {
+func BootAnimation(connectionc net.Conn, bootDone chan bool) {
 	const fps = 60
 	var frame_duration time.Duration = time.Second / time.Duration(fps)
 	frames := make(chan [97][3]byte)
@@ -44,21 +44,17 @@ func BootAnimation(connectionc net.Conn, done chan bool, bootDone chan bool) {
 		close(frames)
 	}()
 	go func() {
-	breakloop:
 		for {
 			start := time.Now()
 			led_array, more := <-frames
 			select {
 			case <-bootDone:
-				done <- true
-				break breakloop
+				return
 			default:
-
 			}
 			connection.SendUdpPacket(connectionc, led_array)
 			if !more {
-				done <- true
-				break
+				return
 			}
 			for time.Since(start) < frame_duration-time.Duration(time.Since(start).Milliseconds()) {
 			}
