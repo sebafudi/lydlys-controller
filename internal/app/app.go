@@ -39,14 +39,14 @@ func RunApp() {
 
 	const fps = 60
 	offset := 0.0
-	var frame_duration time.Duration = time.Second / time.Duration(fps)
-	led_array := make(chan [97][3]byte)
+	var frameDuration time.Duration = time.Second / time.Duration(fps)
+	ledArray := make(chan [97][3]byte)
 	for {
 		start := time.Now()
-		go leds.Generate_rainbow(led_array, offset)
-		connection.SendUdpPacket(connectionc, <-led_array)
+		go leds.GenerateRainbow(ledArray, offset)
+		connection.SendUdpPacket(connectionc, <-ledArray)
 		offset += 1
-		for time.Since(start) < frame_duration-time.Duration(time.Since(start).Milliseconds()) {
+		for time.Since(start) < frameDuration-time.Duration(time.Since(start).Milliseconds()) {
 		}
 	}
 }

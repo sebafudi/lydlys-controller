@@ -21,9 +21,9 @@ func StartConnection(ip string, port string) net.Conn {
 	return conn
 }
 
-func RegisterDevice(serverUrl string, pub_base64 string, serial string) {
+func RegisterDevice(serverUrl string, pubBase64 string, serial string) {
 	address := serverUrl + "/registerDevice"
-	data := fmt.Sprintf(`{"pub_key": "%s", "serial": "%s"}`, pub_base64, serial)
+	data := fmt.Sprintf(`{"pub_key": "%s", "serial": "%s"}`, pubBase64, serial)
 	_, err := http.Post(address, "application/json", bytes.NewBuffer([]byte(data)))
 	if err != nil {
 		fmt.Println(err)
@@ -58,10 +58,10 @@ func GetUserToken(serverUrl string, serial string, priv []byte) string {
 		return ""
 	}
 
-	decrypted_data := keys.Decode_using_private_key(priv, bodyBytes)
-	if decrypted_data == nil {
+	decryptedData := keys.DecodeUsingPrivateKey(priv, bodyBytes)
+	if decryptedData == nil {
 		fmt.Println("Error decrypting data")
 		return ""
 	}
-	return string(decrypted_data)
+	return string(decryptedData)
 }

@@ -5,14 +5,14 @@ import (
 	"net"
 )
 
-func SendUdpPacket(conn net.Conn, led_array [97][3]byte) {
-	var bytes_to_send []byte
+func SendUdpPacket(conn net.Conn, ledArray [97][3]byte) {
+	var bytesToSend []byte
 	for i := 0; i < 97; i++ {
 		for j := 0; j < 3; j++ {
-			bytes_to_send = append(bytes_to_send, led_array[i][j])
+			bytesToSend = append(bytesToSend, ledArray[i][j])
 		}
 	}
-	_, err := conn.Write(bytes_to_send)
+	_, err := conn.Write(bytesToSend)
 	if err != nil {
 		fmt.Println(err)
 		return

@@ -9,57 +9,57 @@ import (
 	"os"
 )
 
-func create_keys() ([]byte, []byte) {
+func createKeys() ([]byte, []byte) {
 	priv, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
 		fmt.Println(err)
 		return nil, nil
 	}
 	pub := priv.Public()
-	priv_bytes := x509.MarshalPKCS1PrivateKey(priv)
+	privBytes := x509.MarshalPKCS1PrivateKey(priv)
 	if err != nil {
 		fmt.Println(err)
 		return nil, nil
 	}
-	pub_bytes, err := x509.MarshalPKIXPublicKey(pub)
+	pubBytes, err := x509.MarshalPKIXPublicKey(pub)
 	if err != nil {
 		fmt.Println(err)
 		return nil, nil
 	}
-	return priv_bytes, pub_bytes
+	return privBytes, pubBytes
 }
 
-func Convert_to_base64(priv, pub []byte) (string, string) {
-	priv_base64 := base64.StdEncoding.EncodeToString(priv)
-	pub_base64 := base64.StdEncoding.EncodeToString(pub)
-	return priv_base64, pub_base64
+func ConvertToBase64(priv, pub []byte) (string, string) {
+	privBase64 := base64.StdEncoding.EncodeToString(priv)
+	pubBase64 := base64.StdEncoding.EncodeToString(pub)
+	return privBase64, pubBase64
 }
 
-func create_new_keys() ([]byte, []byte) {
-	priv, pub := create_keys()
-	priv_base64, pub_base64 := Convert_to_base64(priv, pub)
-	os.WriteFile("pub.key", []byte(pub_base64), 0644)
-	os.WriteFile("priv.key", []byte(priv_base64), 0644)
+func createNewKeys() ([]byte, []byte) {
+	priv, pub := createKeys()
+	privBase64, pubBase64 := ConvertToBase64(priv, pub)
+	os.WriteFile("pub.key", []byte(pubBase64), 0644)
+	os.WriteFile("priv.key", []byte(privBase64), 0644)
 	return priv, pub
 }
 
-func read_keys() ([]byte, []byte) {
-	priv_base64, err := os.ReadFile("priv.key")
+func readKeys() ([]byte, []byte) {
+	privBase64, err := os.ReadFile("priv.key")
 	if err != nil {
 		fmt.Println(err)
 		return nil, nil
 	}
-	pub_base64, err := os.ReadFile("pub.key")
+	pubBase64, err := os.ReadFile("pub.key")
 	if err != nil {
 		fmt.Println(err)
 		return nil, nil
 	}
-	priv, err := base64.StdEncoding.DecodeString(string(priv_base64))
+	priv, err := base64.StdEncoding.DecodeString(string(privBase64))
 	if err != nil {
 		fmt.Println(err)
 		return nil, nil
 	}
-	pub, err := base64.StdEncoding.DecodeString(string(pub_base64))
+	pub, err := base64.StdEncoding.DecodeString(string(pubBase64))
 	if err != nil {
 		fmt.Println(err)
 		return nil, nil
@@ -67,33 +67,33 @@ func read_keys() ([]byte, []byte) {
 	return priv, pub
 }
 
-func Prepare_keys() ([]byte, []byte) {
+func PrepareKeys() ([]byte, []byte) {
 	var priv, pub []byte = make([]byte, 64), make([]byte, 32)
 
 	if _, err := os.Stat("priv.key"); os.IsNotExist(err) {
-		priv, pub = create_new_keys()
+		priv, pub = createNewKeys()
 	} else {
-		priv, pub = read_keys()
+		priv, pub = readKeys()
 	}
 	return priv, pub
 }
 
-func Decode_using_private_key(priv []byte, data []byte) []byte {
-	priv_key, err := x509.ParsePKCS1PrivateKey(priv)
+func DecodeUsingPrivateKey(priv []byte, data []byte) []byte {
+	privKey, err := x509.ParsePKCS1PrivateKey(priv)
 	if err != nil {
 		fmt.Println(err)
 		return nil
 	}
-	decrypted_data, err := rsa.DecryptPKCS1v15(rand.Reader, priv_key, data)
+	decryptedData, err := rsa.DecryptPKCS1v15(rand.Reader, privKey, data)
 	if err != nil {
 		fmt.Println(err)
 		return nil
 	}
-	return decrypted_data
+	return decryptedData
 }
 
-func Prepare_keys_base64() (string, string) {
-	priv, pub := Prepare_keys()
-	priv_base64, pub_base64 := Convert_to_base64(priv, pub)
-	return priv_base64, pub_base64
+func PrepareKeysBase64() (string, string) {
+	priv, pub := PrepareKeys()
+	privBase64, pubBase64 := ConvertToBase64(priv, pub)
+	return privBase64, pubBase64
 }
