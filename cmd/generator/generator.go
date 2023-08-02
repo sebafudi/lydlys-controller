@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/sebafudi/lydlys-controller/internal/leds"
 )
@@ -15,7 +16,6 @@ func main() {
 	out := flag.String("out", "./tmp/rainbow.lys", "Output file name")
 	flag.Parse()
 
-	// ledArrayChan := make(chan [][3]byte, *ledCount)
 	ledBuffer := make([][][3]byte, *seconds**fps)
 
 	for i := range ledBuffer {
@@ -23,19 +23,32 @@ func main() {
 	}
 
 	toWrite := make([]byte, 0)
-	for i := 0; i < *fps**seconds; i++ {
-		// go leds.GenerateRainbow(ledArrayChan, float64(i))
-		ledBuffer := leds.GenerateSweep(i)
-		// ledBuffer := <-ledArrayChan
+
+	// GENERATE LED BUFFER
+	startTime := time.Now()
+	var totalTime time.Duration
+	ledBuffer = leds.GenerateSmoothSweep(*ledCount, *seconds**fps)
+	totalTime = time.Since(startTime)
+	fmt.Printf("Time to generate: %v\t %v per frame\n", totalTime, totalTime/time.Duration(*seconds**fps))
+
+	// APPEND TO BYTE SLICE
+	startTime = time.Now()
+	for i := 0; i < *seconds**fps; i++ {
 		for j := 0; j < *ledCount; j++ {
 			for k := 0; k < 3; k++ {
-				toWrite = append(toWrite, ledBuffer[j][k])
+				toWrite = append(toWrite, ledBuffer[i][j][k])
 			}
 		}
 	}
+	totalTime += time.Since(startTime)
+	fmt.Printf("Time to append: %v\t total: %v\n", time.Since(startTime), totalTime)
 
+	// WRITE TO FILE
+	startTime = time.Now()
 	err := os.WriteFile(*out, toWrite, 0644)
 	if err != nil {
 		fmt.Println(err)
 	}
+	totalTime += time.Since(startTime)
+	fmt.Printf("Time to write: %v\t total: %v\n", time.Since(startTime), totalTime)
 }
