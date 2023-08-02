@@ -14,6 +14,7 @@ func main() {
 	seconds := flag.Int("seconds", 3, "Number of seconds to run the animation")
 	fps := flag.Int("fps", 60, "Number of frames per second")
 	out := flag.String("out", "./tmp/rainbow.lys", "Output file name")
+	color := flag.String("color", "white", "Color to use for the animation")
 	flag.Parse()
 
 	ledBuffer := make([][][3]byte, *seconds**fps)
@@ -27,7 +28,7 @@ func main() {
 	// GENERATE LED BUFFER
 	startTime := time.Now()
 	var totalTime time.Duration
-	ledBuffer = leds.GenerateSmoothSweep(*ledCount, *seconds**fps)
+	ledBuffer = leds.GenerateSmoothSweep(*ledCount, *seconds**fps, *color)
 	totalTime = time.Since(startTime)
 	fmt.Printf("Time to generate: %v\t %v per frame\n", totalTime, totalTime/time.Duration(*seconds**fps))
 
