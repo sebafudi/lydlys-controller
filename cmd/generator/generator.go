@@ -15,7 +15,7 @@ func main() {
 	out := flag.String("out", "./tmp/rainbow.lys", "Output file name")
 	flag.Parse()
 
-	ledArrayChan := make(chan [][3]byte, *ledCount)
+	// ledArrayChan := make(chan [][3]byte, *ledCount)
 	ledBuffer := make([][][3]byte, *seconds**fps)
 
 	for i := range ledBuffer {
@@ -24,8 +24,9 @@ func main() {
 
 	toWrite := make([]byte, 0)
 	for i := 0; i < *fps**seconds; i++ {
-		go leds.GenerateRainbow(ledArrayChan, float64(i))
-		ledBuffer := <-ledArrayChan
+		// go leds.GenerateRainbow(ledArrayChan, float64(i))
+		ledBuffer := leds.GenerateSweep(i)
+		// ledBuffer := <-ledArrayChan
 		for j := 0; j < *ledCount; j++ {
 			for k := 0; k < 3; k++ {
 				toWrite = append(toWrite, ledBuffer[j][k])
