@@ -18,7 +18,7 @@ func RunApp() {
 		return
 	}
 	flags := config.GetFlags()
-	connectionc := connection.StartConnection(flags.Ip, flags.Port)
+	connectionc := connection.StartConnection(*flags.Ip, *flags.Port)
 	var wg sync.WaitGroup
 
 	bootDone := make(chan bool)
@@ -45,7 +45,7 @@ func RunApp() {
 	}
 	fps := flags.FPS
 	// offset := 0.0
-	var frameDuration time.Duration = time.Second / time.Duration(fps)
+	var frameDuration time.Duration = time.Second / time.Duration(*fps)
 	// ledArray := make(chan [][3]byte, 97)
 	// for {
 	// 	start := time.Now()
@@ -62,7 +62,7 @@ func RunApp() {
 	for {
 		start := time.Now()
 
-		frameNumber := int(time.Since(sinceStart).Seconds() * float64(fps))
+		frameNumber := int(time.Since(sinceStart).Seconds() * float64(*fps))
 		if frameNumber*(97*3) >= len(file) {
 			fmt.Println("end of file")
 			fmt.Printf("Duration: %v\n", time.Since(sinceStart))
