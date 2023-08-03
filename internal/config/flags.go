@@ -26,7 +26,6 @@ func GetFlags() Flags {
 		defer singleFlagLock.Unlock()
 		if singleFlagLoad == nil {
 			singleFlagLoad = &single{}
-			flag.Parse()
 			flags = parseFlags()
 		}
 	}
@@ -34,10 +33,10 @@ func GetFlags() Flags {
 }
 
 func parseFlags() Flags {
-	flag.Parse()
 	flags = Flags{
 		Ip:   *flag.String("ip", os.Getenv("DEFAULT_IP"), "IP address to send UDP packets to"),
 		Port: *flag.String("port", os.Getenv("DEFAULT_PORT"), "Port to send UDP packets to"),
 	}
+	flag.Parse()
 	return flags
 }
