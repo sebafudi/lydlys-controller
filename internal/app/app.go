@@ -43,7 +43,7 @@ func RunApp() {
 		fmt.Println(err)
 		return
 	}
-	const fps = 60
+	fps := flags.FPS
 	// offset := 0.0
 	var frameDuration time.Duration = time.Second / time.Duration(fps)
 	// ledArray := make(chan [][3]byte, 97)

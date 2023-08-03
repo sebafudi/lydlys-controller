@@ -9,6 +9,7 @@ import (
 type Flags struct {
 	Ip   string
 	Port string
+	FPS  int
 }
 
 var flags Flags
@@ -36,6 +37,7 @@ func parseFlags() Flags {
 	flags = Flags{
 		Ip:   *flag.String("ip", os.Getenv("DEFAULT_IP"), "IP address to send UDP packets to"),
 		Port: *flag.String("port", os.Getenv("DEFAULT_PORT"), "Port to send UDP packets to"),
+		FPS:  *flag.Int("fps", 60, "Frames per second"),
 	}
 	flag.Parse()
 	return flags
