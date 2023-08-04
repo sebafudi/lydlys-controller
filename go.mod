@@ -12,6 +12,12 @@ require (
 )
 
 require (
+	github.com/gen2brain/shm v0.0.0-20200228170931-49f9650110c5 // indirect
+	github.com/jezek/xgb v0.0.0-20210312150743-0e0f116e1240 // indirect
+	github.com/lxn/win v0.0.0-20210218163916-a377121e959e // indirect
+)
+
+require (
 	github.com/aws/aws-sdk-go v1.38.20 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/ebitengine/purego v0.5.0-alpha // indirect
@@ -22,6 +28,7 @@ require (
 	github.com/jbenet/go-base58 v0.0.0-20150317085156-6237cf65f3a6 // indirect
 	github.com/jdkato/prose v1.2.1 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
+	github.com/kbinani/screenshot v0.0.0-20210720154843-7d3a670d8329
 	github.com/u2takey/go-utils v0.3.1 // indirect
 	golang.org/x/sys v0.10.0 // indirect
 	gopkg.in/neurosnap/sentences.v1 v1.0.6 // indirect
