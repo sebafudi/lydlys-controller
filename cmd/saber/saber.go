@@ -42,6 +42,48 @@ type Save300 struct {
 	CustomData                        interface{}          `json:"customData"`
 }
 
+// const BackLasers = 0
+// const RingLights = 1
+// const LeftLasers = 2
+// const RightLasers = 3
+// const CenterLights = 4
+// const BoostColors = 5
+// const RingSpin = 8
+// const RingZoom = 9
+// const ExtraLights = 10
+// const LeftLaserSpeed = 12
+// const RightLaserSpeed = 13
+
+const (
+	BackLasers      = 0
+	RingLights      = 1
+	LeftLasers      = 2
+	RightLasers     = 3
+	CenterLights    = 4
+	BoostColors     = 5
+	RingSpin        = 8
+	RingZoom        = 9
+	ExtraLights     = 10
+	LeftLaserSpeed  = 12
+	RightLaserSpeed = 13
+)
+
+const (
+	Off         = 0
+	Blue        = 1
+	FlashBlue   = 2
+	FadeBlue    = 3
+	FadeToBlue  = 4
+	Red         = 5
+	FlashRed    = 6
+	FadeRed     = 7
+	FadeToRed   = 8
+	White       = 9
+	FlashWhite  = 10
+	FadeWhite   = 11
+	FadeToWhite = 12
+)
+
 type BasicBeatmapEvents struct {
 	B  float64 `json:"b"`
 	Et int     `json:"et"`
@@ -71,21 +113,108 @@ func isLight300(event BasicBeatmapEvents) bool {
 	return event.Et >= 0 && event.Et <= 4
 }
 
-func fadeLed(led [3]byte, strength byte) [3]byte {
-	if led[0] < strength {
-		led[0] = 0
-	} else {
-		led[0] -= strength
+func processLed(led [3]byte, ledState byte, ledStateProgress *int) [3]byte {
+	switch ledState {
+	case Off:
+		led = [3]byte{0, 0, 0}
+	case Blue:
+		led = [3]byte{0, 0, 220}
+	case FlashBlue:
+		if *ledStateProgress == 0 {
+			led = [3]byte{0, 0, 255}
+		} else if *ledStateProgress < 2 {
+			led = [3]byte{0, 0, 220}
+		} else {
+			led = [3]byte{0, 0, 0}
+		}
+	case FadeBlue:
+		if *ledStateProgress == 0 {
+			led = [3]byte{0, 0, 220}
+		} else {
+			if led[2] > 0 {
+				led[2] -= 5
+			}
+		}
+	case FadeToBlue:
+		if led[0] > 0 {
+			led[0] -= 5
+		}
+		if led[1] > 0 {
+			led[1] -= 5
+		}
+		if led[2] < 255 {
+			led[2] += 5
+		}
+	case Red:
+		led = [3]byte{255, 0, 0}
+	case FlashRed:
+		if *ledStateProgress == 0 {
+			led = [3]byte{255, 0, 0}
+		} else if *ledStateProgress < 2 {
+			led = [3]byte{220, 0, 0}
+		} else {
+			led = [3]byte{0, 0, 0}
+		}
+	case FadeRed:
+		if *ledStateProgress == 0 {
+			led = [3]byte{220, 0, 0}
+		} else {
+			if led[0] > 0 {
+				led[0] -= 5
+			}
+		}
+	case FadeToRed:
+		if led[0] < 255 {
+			led[0] += 5
+		}
+		if led[1] > 0 {
+			led[1] -= 5
+		}
+		if led[2] > 0 {
+			led[2] -= 5
+		}
+	case White:
+		led = [3]byte{220, 220, 220}
+	case FlashWhite:
+		if *ledStateProgress == 0 {
+			led = [3]byte{255, 255, 255}
+		} else if *ledStateProgress < 2 {
+			led = [3]byte{220, 220, 220}
+		} else {
+			led = [3]byte{0, 0, 0}
+		}
+	case FadeWhite:
+		if *ledStateProgress == 0 {
+			led = [3]byte{220, 220, 220}
+		} else {
+			if led[0] > 0 {
+				led[0] -= 5
+			}
+			if led[1] > 0 {
+				led[1] -= 5
+			}
+			if led[2] > 0 {
+				led[2] -= 5
+			}
+		}
+	case FadeToWhite:
+		if led[0] < 255 {
+			led[0] += 5
+		}
+		if led[1] < 255 {
+			led[1] += 5
+		}
+		if led[2] < 255 {
+			led[2] += 5
+		}
 	}
-	if led[1] < strength {
-		led[1] = 0
-	} else {
-		led[1] -= strength
-	}
-	if led[2] < strength {
-		led[2] = 0
-	} else {
-		led[2] -= strength
+	*ledStateProgress++
+	return led
+}
+
+func processLeds(led [][3]byte, ledState []byte, ledStateProgress []int) [][3]byte {
+	for i := 0; i < len(led); i++ {
+		led[i] = processLed(led[i], ledState[i], &ledStateProgress[i])
 	}
 
 	return led
@@ -113,7 +242,7 @@ func main() {
 	}
 
 	// const fps = 60
-	const bpm = 70
+	const bpm = 90
 	const ledOffset = 10
 	const ledCount = 40
 	beatTimeInMs := 60000.0 / bpm
@@ -143,14 +272,14 @@ func main() {
 	startTime := time.Now()
 	player.Play()
 	leds := make([][3]byte, 97)
+	ledState := make([]byte, 97)
+	ledStateProgress := make([]int, 97)
 	go func() {
 		for {
 			if !player.IsPlaying() {
 				break
 			}
-			for i := 0; i < len(leds); i++ {
-				leds[i] = fadeLed(leds[i], 1)
-			}
+			leds = processLeds(leds, ledState, ledStateProgress)
 			connection.SendUdpPacket(connectionc, leds)
 			time.Sleep(1 * time.Millisecond)
 		}
@@ -172,23 +301,28 @@ func main() {
 			divideTo := 5
 			if notes[i].Type == 0 {
 				for j := 0; j < ledCount/divideTo; j++ {
-					leds[j+ledOffset] = [3]byte{128, 0, 64}
+					ledState[j+ledOffset] = byte(notes[i].Value)
+
 				}
 			} else if notes[i].Type == 1 {
 				for j := ledCount / divideTo; j < ledCount/divideTo*2; j++ {
-					leds[j+ledOffset] = [3]byte{128, 0, 64}
+					ledState[j+ledOffset] = byte(notes[i].Value)
+					ledStateProgress[j+ledOffset] = 0
 				}
 			} else if notes[i].Type == 2 {
 				for j := ledCount / divideTo * 2; j < ledCount/divideTo*3; j++ {
-					leds[j+ledOffset] = [3]byte{128, 0, 64}
+					ledState[j+ledOffset] = byte(notes[i].Value)
+					ledStateProgress[j+ledOffset] = 0
 				}
 			} else if notes[i].Type == 3 {
 				for j := ledCount / divideTo * 3; j < ledCount/divideTo*4; j++ {
-					leds[j+ledOffset] = [3]byte{128, 0, 64}
+					ledState[j+ledOffset] = byte(notes[i].Value)
+					ledStateProgress[j+ledOffset] = 0
 				}
 			} else if notes[i].Type == 4 {
 				for j := ledCount / divideTo * 4; j < ledCount; j++ {
-					leds[j+ledOffset] = [3]byte{128, 0, 64}
+					ledState[j+ledOffset] = byte(notes[i].Value)
+					ledStateProgress[j+ledOffset] = 0
 				}
 			}
 
