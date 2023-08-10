@@ -56,6 +56,14 @@ const (
 	RightLaserSpeed = 13
 )
 
+// var defaultColorRed = [3]byte{220, 0, 0}
+// var defaultColorBlue = [3]byte{0, 0, 220}
+
+var defaultColorRed = [3]byte{204, 143, 143}
+var defaultColorBlue = [3]byte{143, 143, 204}
+
+var brighterColorRed = [3]byte{224, 163, 163}
+
 const (
 	Off         = 0
 	Blue        = 1
@@ -173,20 +181,20 @@ func processLed(led [3]byte, ledState byte, ledStateProgress *int, lastLedState 
 		if ledColor[0] > 0 || ledColor[1] > 0 || ledColor[2] > 0 {
 			led = ledColor
 		} else {
-			led = [3]byte{220, 0, 0}
+			led = defaultColorRed
 		}
 	case FlashRed:
 		if *ledStateProgress == 0 {
-			led = [3]byte{255, 0, 0}
+			led = brighterColorRed
 		} else if *ledStateProgress < 2 {
-			led = [3]byte{220, 0, 0}
+			led = defaultColorRed
 		} else {
 			if lastLedState == Off {
 				led = [3]byte{0, 0, 0}
 			} else if lastLedState == Blue {
 				led = [3]byte{0, 0, 220}
 			} else if lastLedState == Red {
-				led = [3]byte{220, 0, 0}
+				led = defaultColorRed
 			} else if lastLedState == White {
 				led = [3]byte{220, 220, 220}
 			} else {
@@ -307,7 +315,7 @@ func main() {
 	fmt.Println(save.Events[0].CustomData)
 
 	// const fps = 60
-	const bpm = 172
+	const bpm = 90
 	const ledOffset = 0
 	const ledCount = 97
 	beatTimeInMs := 60000.0 / bpm
