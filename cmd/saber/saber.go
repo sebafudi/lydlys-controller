@@ -100,9 +100,32 @@ type Note struct {
 }
 
 type Event struct {
-	Time  float64 `json:"_time"` // in beats
-	Type  int     `json:"_type"`
-	Value int     `json:"_value"`
+	Time       float64    `json:"_time"` // in beats
+	Type       int        `json:"_type"`
+	Value      int        `json:"_value"`
+	CustomData CustomData `json:"_customData"`
+}
+
+type CustomData struct {
+	Color         []float64     `json:"_color"`
+	LightGradient LightGradient `json:"_lightGradient"`
+}
+
+type LightGradient struct {
+	Duration   float64   `json:"_duration"`
+	StartColor []float64 `json:"_startColor"`
+	EndColor   []float64 `json:"_endColor"`
+	Easing     string    `json:"_easing"`
+}
+
+func fadeColor(startColor [3]byte, endColor [3]byte, duration float64, time float64) [3]byte {
+	var color [3]byte
+	for i := 0; i < 3; i++ {
+		color[i] = byte(float64(startColor[i]) + (float64(endColor[i])-float64(startColor[i]))*time/duration)
+
+	}
+	fmt.Println(time)
+	return color
 }
 
 func isLight(note Event) bool {
@@ -113,19 +136,33 @@ func isLight300(event BasicBeatmapEvents) bool {
 	return event.Et >= 0 && event.Et <= 4
 }
 
-func processLed(led [3]byte, ledState byte, ledStateProgress *int) [3]byte {
+func processLed(led [3]byte, ledState byte, ledStateProgress *int, lastLedState byte, ledColor [3]byte) [3]byte {
 	switch ledState {
 	case Off:
 		led = [3]byte{0, 0, 0}
 	case Blue:
-		led = [3]byte{0, 0, 220}
+		if ledColor[0] > 0 || ledColor[1] > 0 || ledColor[2] > 0 {
+			led = ledColor
+		} else {
+			led = [3]byte{220, 0, 0}
+		}
 	case FlashBlue:
 		if *ledStateProgress == 0 {
 			led = [3]byte{0, 0, 255}
 		} else if *ledStateProgress < 2 {
 			led = [3]byte{0, 0, 220}
 		} else {
-			led = [3]byte{0, 0, 0}
+			if lastLedState == Off {
+				led = [3]byte{0, 0, 0}
+			} else if lastLedState == Blue {
+				led = [3]byte{0, 0, 220}
+			} else if lastLedState == Red {
+				led = [3]byte{220, 0, 0}
+			} else if lastLedState == White {
+				led = [3]byte{220, 220, 220}
+			} else {
+				led = [3]byte{0, 0, 0}
+			}
 		}
 	case FadeBlue:
 		if *ledStateProgress == 0 {
@@ -146,14 +183,29 @@ func processLed(led [3]byte, ledState byte, ledStateProgress *int) [3]byte {
 			led[2] += 5
 		}
 	case Red:
-		led = [3]byte{255, 0, 0}
+		if ledColor[0] > 0 || ledColor[1] > 0 || ledColor[2] > 0 {
+			led = ledColor
+		} else {
+			led = [3]byte{220, 0, 0}
+		}
 	case FlashRed:
 		if *ledStateProgress == 0 {
 			led = [3]byte{255, 0, 0}
 		} else if *ledStateProgress < 2 {
 			led = [3]byte{220, 0, 0}
 		} else {
-			led = [3]byte{0, 0, 0}
+			if lastLedState == Off {
+				led = [3]byte{0, 0, 0}
+			} else if lastLedState == Blue {
+				led = [3]byte{0, 0, 220}
+			} else if lastLedState == Red {
+				led = [3]byte{220, 0, 0}
+			} else if lastLedState == White {
+				led = [3]byte{220, 220, 220}
+			} else {
+				led = [3]byte{0, 0, 0}
+			}
+
 		}
 	case FadeRed:
 		if *ledStateProgress == 0 {
@@ -181,7 +233,18 @@ func processLed(led [3]byte, ledState byte, ledStateProgress *int) [3]byte {
 		} else if *ledStateProgress < 2 {
 			led = [3]byte{220, 220, 220}
 		} else {
-			led = [3]byte{0, 0, 0}
+			if lastLedState == Off {
+				led = [3]byte{0, 0, 0}
+			} else if lastLedState == Blue {
+				led = [3]byte{0, 0, 220}
+			} else if lastLedState == Red {
+				led = [3]byte{220, 0, 0}
+			} else if lastLedState == White {
+				led = [3]byte{220, 220, 220}
+			} else {
+				led = [3]byte{0, 0, 0}
+			}
+
 		}
 	case FadeWhite:
 		if *ledStateProgress == 0 {
@@ -212,12 +275,26 @@ func processLed(led [3]byte, ledState byte, ledStateProgress *int) [3]byte {
 	return led
 }
 
-func processLeds(led [][3]byte, ledState []byte, ledStateProgress []int) [][3]byte {
+func processLeds(led [][3]byte, ledState []byte, ledStateProgress []int, lastLedState []byte, ledColor [][3]byte, ledStartColor [][3]byte, ledEndColor [][3]byte, ledFadeDuration []float64, beatsPerFrame float64) [][3]byte {
 	for i := 0; i < len(led); i++ {
-		led[i] = processLed(led[i], ledState[i], &ledStateProgress[i])
+		if ledState[i] == 255 {
+			led[i] = fadeColor(ledStartColor[i], ledEndColor[i], ledFadeDuration[i], float64(ledStateProgress[i])*beatsPerFrame)
+			ledStateProgress[i]++
+		} else {
+			led[i] = processLed(led[i], ledState[i], &ledStateProgress[i], lastLedState[i], ledColor[i])
+		}
 	}
-
 	return led
+}
+
+func float64ToByteColor(f []float64) [3]byte {
+	if len(f) == 3 {
+		return [3]byte{byte(f[0] * 255), byte(f[1] * 255), byte(f[2] * 255)}
+	}
+	if len(f) == 4 {
+		return [3]byte{byte(f[0] * f[3] * 255), byte(f[1] * f[3] * 255), byte(f[2] * f[3] * 255)}
+	}
+	return [3]byte{0, 0, 0}
 }
 
 func main() {
@@ -240,11 +317,12 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	fmt.Println(save.Events[0].CustomData)
 
 	// const fps = 60
-	const bpm = 90
-	const ledOffset = 10
-	const ledCount = 40
+	const bpm = 172
+	const ledOffset = 0
+	const ledCount = 97
 	beatTimeInMs := 60000.0 / bpm
 
 	fileBytes, err := os.ReadFile("tmp/paradise/song.mp3")
@@ -273,15 +351,27 @@ func main() {
 	player.Play()
 	leds := make([][3]byte, 97)
 	ledState := make([]byte, 97)
+	lastLedState := make([]byte, 97)
 	ledStateProgress := make([]int, 97)
+	ledColor := make([][3]byte, 97)
+	ledStartColor := make([][3]byte, 97)
+	ledEndColor := make([][3]byte, 97)
+	ledFadeDuration := make([]float64, 97)
+	fps := 120
+	frameTime := time.Duration(1000/fps) * time.Millisecond
+	beatsPerFrame := (bpm / 60) / float64(fps)
+	fmt.Println(frameTime)
 	go func() {
 		for {
+			start := time.Now()
 			if !player.IsPlaying() {
 				break
 			}
-			leds = processLeds(leds, ledState, ledStateProgress)
+
+			leds = processLeds(leds, ledState, ledStateProgress, lastLedState, ledColor, ledStartColor, ledEndColor, ledFadeDuration, beatsPerFrame)
 			connection.SendUdpPacket(connectionc, leds)
-			time.Sleep(1 * time.Millisecond)
+			for time.Since(start) < time.Duration(1000/fps)*time.Millisecond {
+			}
 		}
 	}()
 	for i := 0; i < len(notes); i++ {
@@ -301,28 +391,89 @@ func main() {
 			divideTo := 5
 			if notes[i].Type == 0 {
 				for j := 0; j < ledCount/divideTo; j++ {
-					ledState[j+ledOffset] = byte(notes[i].Value)
-
+					if lastLedState[j+ledOffset] != ledState[j+ledOffset] {
+						ledState[j+ledOffset] = lastLedState[j+ledOffset]
+					}
+					if notes[i].CustomData.LightGradient.Duration > 0 {
+						ledState[j+ledOffset] = byte(255)
+						ledStateProgress[j+ledOffset] = 0
+						ledStartColor[j+ledOffset] = float64ToByteColor(notes[i].CustomData.LightGradient.StartColor)
+						ledEndColor[j+ledOffset] = float64ToByteColor(notes[i].CustomData.LightGradient.EndColor)
+						ledFadeDuration[j+ledOffset] = notes[i].CustomData.LightGradient.Duration
+					} else {
+						ledState[j+ledOffset] = byte(notes[i].Value)
+						ledStateProgress[j+ledOffset] = 0
+						ledColor[j+ledOffset] = float64ToByteColor(notes[i].CustomData.Color)
+					}
 				}
 			} else if notes[i].Type == 1 {
 				for j := ledCount / divideTo; j < ledCount/divideTo*2; j++ {
-					ledState[j+ledOffset] = byte(notes[i].Value)
-					ledStateProgress[j+ledOffset] = 0
+					if lastLedState[j+ledOffset] != ledState[j+ledOffset] {
+						ledState[j+ledOffset] = lastLedState[j+ledOffset]
+					}
+					if notes[i].CustomData.LightGradient.Duration > 0 {
+						ledState[j+ledOffset] = byte(255)
+						ledStateProgress[j+ledOffset] = 0
+						ledStartColor[j+ledOffset] = float64ToByteColor(notes[i].CustomData.LightGradient.StartColor)
+						ledEndColor[j+ledOffset] = float64ToByteColor(notes[i].CustomData.LightGradient.EndColor)
+						ledFadeDuration[j+ledOffset] = notes[i].CustomData.LightGradient.Duration
+					} else {
+						ledState[j+ledOffset] = byte(notes[i].Value)
+						ledStateProgress[j+ledOffset] = 0
+						ledColor[j+ledOffset] = float64ToByteColor(notes[i].CustomData.Color)
+					}
 				}
 			} else if notes[i].Type == 2 {
 				for j := ledCount / divideTo * 2; j < ledCount/divideTo*3; j++ {
-					ledState[j+ledOffset] = byte(notes[i].Value)
-					ledStateProgress[j+ledOffset] = 0
+					if lastLedState[j+ledOffset] != ledState[j+ledOffset] {
+						ledState[j+ledOffset] = lastLedState[j+ledOffset]
+					}
+
+					if notes[i].CustomData.LightGradient.Duration > 0 {
+						ledState[j+ledOffset] = byte(255)
+						ledStateProgress[j+ledOffset] = 0
+						ledStartColor[j+ledOffset] = float64ToByteColor(notes[i].CustomData.LightGradient.StartColor)
+						ledEndColor[j+ledOffset] = float64ToByteColor(notes[i].CustomData.LightGradient.EndColor)
+						ledFadeDuration[j+ledOffset] = notes[i].CustomData.LightGradient.Duration
+					} else {
+						ledState[j+ledOffset] = byte(notes[i].Value)
+						ledStateProgress[j+ledOffset] = 0
+						ledColor[j+ledOffset] = float64ToByteColor(notes[i].CustomData.Color)
+					}
 				}
 			} else if notes[i].Type == 3 {
 				for j := ledCount / divideTo * 3; j < ledCount/divideTo*4; j++ {
-					ledState[j+ledOffset] = byte(notes[i].Value)
-					ledStateProgress[j+ledOffset] = 0
+					if lastLedState[j+ledOffset] != ledState[j+ledOffset] {
+						ledState[j+ledOffset] = lastLedState[j+ledOffset]
+					}
+					if notes[i].CustomData.LightGradient.Duration > 0 {
+						ledState[j+ledOffset] = byte(255)
+						ledStateProgress[j+ledOffset] = 0
+						ledStartColor[j+ledOffset] = float64ToByteColor(notes[i].CustomData.LightGradient.StartColor)
+						ledEndColor[j+ledOffset] = float64ToByteColor(notes[i].CustomData.LightGradient.EndColor)
+						ledFadeDuration[j+ledOffset] = notes[i].CustomData.LightGradient.Duration
+					} else {
+						ledState[j+ledOffset] = byte(notes[i].Value)
+						ledStateProgress[j+ledOffset] = 0
+						ledColor[j+ledOffset] = float64ToByteColor(notes[i].CustomData.Color)
+					}
 				}
 			} else if notes[i].Type == 4 {
 				for j := ledCount / divideTo * 4; j < ledCount; j++ {
-					ledState[j+ledOffset] = byte(notes[i].Value)
-					ledStateProgress[j+ledOffset] = 0
+					if lastLedState[j+ledOffset] != ledState[j+ledOffset] {
+						ledState[j+ledOffset] = lastLedState[j+ledOffset]
+					}
+					if notes[i].CustomData.LightGradient.Duration > 0 {
+						ledState[j+ledOffset] = byte(255)
+						ledStateProgress[j+ledOffset] = 0
+						ledStartColor[j+ledOffset] = float64ToByteColor(notes[i].CustomData.LightGradient.StartColor)
+						ledEndColor[j+ledOffset] = float64ToByteColor(notes[i].CustomData.LightGradient.EndColor)
+						ledFadeDuration[j+ledOffset] = notes[i].CustomData.LightGradient.Duration
+					} else {
+						ledState[j+ledOffset] = byte(notes[i].Value)
+						ledStateProgress[j+ledOffset] = 0
+						ledColor[j+ledOffset] = float64ToByteColor(notes[i].CustomData.Color)
+					}
 				}
 			}
 
