@@ -42,18 +42,6 @@ type Save300 struct {
 	CustomData                        interface{}          `json:"customData"`
 }
 
-// const BackLasers = 0
-// const RingLights = 1
-// const LeftLasers = 2
-// const RightLasers = 3
-// const CenterLights = 4
-// const BoostColors = 5
-// const RingSpin = 8
-// const RingZoom = 9
-// const ExtraLights = 10
-// const LeftLaserSpeed = 12
-// const RightLaserSpeed = 13
-
 const (
 	BackLasers      = 0
 	RingLights      = 1
@@ -124,7 +112,6 @@ func fadeColor(startColor [3]byte, endColor [3]byte, duration float64, time floa
 		color[i] = byte(float64(startColor[i]) + (float64(endColor[i])-float64(startColor[i]))*time/duration)
 
 	}
-	fmt.Println(time)
 	return color
 }
 
