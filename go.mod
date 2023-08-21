@@ -1,6 +1,6 @@
 module github.com/sebafudi/lydlys-controller
 
-go 1.20
+go 1.21
 
 require (
 	github.com/PerformLine/go-stockutil v1.9.3
