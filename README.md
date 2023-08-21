@@ -3,7 +3,10 @@ Controller repo for the _lydlys_ project.
 
 Backend [repo](https://github.com/sebafudi/lydlys-backend)
 
-## Prototype video (play with audio 🔊)
+## Beat Saber map conversion (play with audio 🔊)
+https://github.com/sebafudi/lydlys-controller/assets/5780459/b1bec9fa-440c-4980-91c5-1b09f83b81f2
+
+## Prototype video - Spotify API (play with audio 🔊)
 https://github.com/sebafudi/lydlys-controller/assets/5780459/abd41eba-9b22-4593-ada0-364ba7c70ea0
 
 ## ENVs
