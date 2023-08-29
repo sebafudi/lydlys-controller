@@ -5,6 +5,7 @@ go 1.21
 require (
 	github.com/PerformLine/go-stockutil v1.9.3
 	github.com/ebitengine/oto/v3 v3.0.0
+	github.com/gorilla/websocket v1.4.2
 	github.com/hajimehoshi/go-mp3 v0.3.4
 	github.com/joho/godotenv v1.5.1
 	github.com/u2takey/ffmpeg-go v0.4.1
