@@ -16,6 +16,7 @@ import (
 	"github.com/hajimehoshi/go-mp3"
 	"github.com/sebafudi/lydlys-controller/internal/config"
 	"github.com/sebafudi/lydlys-controller/internal/connection"
+	"github.com/sebafudi/lydlys-controller/internal/savefile"
 	"github.com/wader/goutubedl"
 
 	ffmpeg "github.com/u2takey/ffmpeg-go"
@@ -30,15 +31,16 @@ func getId(link string) string {
 	return match[1]
 }
 
-func downloadYoutubeVideo(link string, mode string, output string) (string, error) {
+func downloadYoutubeVideo(link string, mode string, output string) (string, float64, error) {
 	goutubedl.Path = "yt-dlp"
 	result, err := goutubedl.New(context.Background(), link, goutubedl.Options{})
 	if err != nil {
-		return "", err
+		return "", 0, err
 	}
 	downloadResult, err := result.Download(context.Background(), mode)
+	fmt.Println(result.Info.FPS)
 	if err != nil {
-		return "", err
+		return "", 0, err
 	}
 	defer downloadResult.Close()
 
@@ -54,11 +56,11 @@ func downloadYoutubeVideo(link string, mode string, output string) (string, erro
 
 	f, err := os.Create(fmt.Sprintf("./tmp/%s/%s.%s", id, output, result.Info.Ext))
 	if err != nil {
-		return "", err
+		return "", 0, err
 	}
 	defer f.Close()
 	io.Copy(f, downloadResult)
-	return result.Info.Ext, nil
+	return result.Info.Ext, result.Info.FPS, nil
 }
 
 func convertAudioToMp3(path string, inputExt string) error {
@@ -124,9 +126,10 @@ func main() {
 	path := fmt.Sprintf("./tmp/%s", id)
 
 	var videoExt string
+	var fps float64
 	if dir, err := os.ReadDir(path); os.IsNotExist(err) || !checkForVideo(dir) {
 		fmt.Println("Downloading video...")
-		videoExt, err = downloadYoutubeVideo(link, "bestvideo", "video")
+		videoExt, fps, err = downloadYoutubeVideo(link, "bestvideo", "video")
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -143,7 +146,7 @@ func main() {
 	var audioExt string
 	if dir, err := os.ReadDir(path); os.IsNotExist(err) || !checkForAudio(dir) {
 		fmt.Println("Downloading audio...")
-		audioExt, err = downloadYoutubeVideo(link, "bestaudio", "audio")
+		audioExt, _, err = downloadYoutubeVideo(link, "bestaudio", "audio")
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -203,6 +206,7 @@ func main() {
 			leds[i][j] = [3]byte{byte(red >> 8), byte(green >> 8), byte(blue >> 8)}
 		}
 	}
+	savefile.SaveFile(leds, path+"/show.lyd", savefile.Metadata{FPS: fps, StripLength: 97})
 
 	fileBytes, err := os.ReadFile(path + "/audio.mp3")
 	if err != nil {
@@ -224,8 +228,6 @@ func main() {
 	}
 	<-readyChan
 	player := otoCtx.NewPlayer(decodedMp3)
-
-	fps := *flags.FPS
 
 	fmt.Println(fps)
 	var frameDuration time.Duration = time.Second / time.Duration(fps)
